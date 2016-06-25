@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2016 Arek Stefánski, Erlend Langseth, Jonatan Sundqvist 
+Copyright (c) 2016 Arek Stefański, Erlend Hofstad Langseth, Elena Nail, Jonatan Sundqvist
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
