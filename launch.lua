@@ -4,4 +4,4 @@
 
 
 -- TODO: Options n' stuff
-os.execute('lib/love-0.10.1-win32/love-0.10.1-win32 --console src')
+os.execute('\"lib\\love-0.10.1-win32\\love-0.10.1-win32\\love.exe\" --console .')
