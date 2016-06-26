@@ -45,12 +45,16 @@ function love.load()
     assets = {}
     assets.fonts = {}
     assets.fonts.alameda = love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30)
-    assets.fonts.kust = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
+    assets.fonts.kust    = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
+    assets.fonts.bigKust = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 136)
 
     state = {}
     state.mode = "interactive"
+    state.running = true
     love.physics.setMeter(64) --the height of a meter our worlds will be 64px
     state.world = love.physics.newWorld(0, 9.81*64, true) --create a world for the bodies to exist in with horizontal gravity of 0 and vertical gravity of 9.81
+
+    state.world:setCallbacks(callbacks.beginContact, callbacks.endContact, callbacks.preSolve, callbacks.postSolve)
 
     -- table to hold all our physical objects
     local w, h = love.graphics.getDimensions()
@@ -74,38 +78,99 @@ function love.load()
 end
 
 
+callbacks = {}
+
+function callbacks:beginContact(a, b, coll)
+  -- print('Bounce')
+end
+
+
+function callbacks:endContact(a, b, coll)
+
+end
+
+
+function callbacks:preSolve(a, b, coll)
+
+end
+
+
+function callbacks:postSolve(a, b, coll, normalimpulse, tangentimpulse)
+
+end
+
+
 function love.update(dt)
   --
-  state.world:update(dt) --this puts the world into motion
 
-  --here we are going to create some keyboard events
-  if love.keyboard.isDown('right') then --press the right arrow key to push the ball to the right
-      state.objects.ball.body:applyForce(400, 0)
-  elseif love.keyboard.isDown('left') then --press the left arrow key to push the ball to the left
-      state.objects.ball.body:applyForce(-400, 0)
-  elseif love.keyboard.isDown('up') then --press the up arrow key to set the ball in the air
-      state.objects.ball.body:setPosition(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
-  elseif love.keyboard.isDown('space') then --press the left arrow key to push the ball to the left
-      state.objects.ball.body:applyForce(0, -400)
+  if state.running then
+    state.world:update(dt) --this puts the world into motion
+
+    --here we are going to create some keyboard events
+    if love.keyboard.isDown('right') then --press the right arrow key to push the ball to the right
+        state.objects.ball.body:applyForce(400, 0)
+    elseif love.keyboard.isDown('left') then --press the left arrow key to push the ball to the left
+        state.objects.ball.body:applyForce(-400, 0)
+    elseif love.keyboard.isDown('up') then --press the up arrow key to set the ball in the air
+        state.objects.ball.body:setPosition(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+    elseif love.keyboard.isDown('space') then --press the left arrow key to push the ball to the left
+        state.objects.ball.body:applyForce(0, -400)
+    end
+
+    state.mode = love.keyboard.isDown('tab') and 'editor' or 'interactive'
   end
-
-  state.mode = love.keyboard.isDown('tab') and 'editor' or 'interactive'
 end
 
 
 function love.mousepressed(mx, my, button, istouch)
   --
   if love.keyboard.isDown('tab') and (button == 1) then
-    table.insert(state.objects, Object(state, { x=mx, y=my }, love.physics.newRectangleShape(math.random(50, 60), math.random(50, 60)), 5, 'dynamic'))
+    local shape = (math.random() > 0.5) and love.physics.newRectangleShape(math.random(20, 120), math.random(20, 120)) or love.physics.newCircleShape(math.random(10, 60))
+    local o = Object(state, { x=mx, y=my }, shape, 5, 'dynamic')
+    o.color = { math.random(0, 255), math.random(0, 255), math.random(0, 255), 255 }
+    table.insert(state.objects, o)
+  end
+end
+
+
+function love.keypressed(key, scancode, isrepeat)
+  if key == 'p' and not isrepeat then
+    state.running = not state.running
   end
 end
 
 
 function love.draw()
-    love.graphics.setColor(255, 255, 255, 255)
-    love.graphics.print(state.mode, 40, 24)
 
-    for _, obj in pairs(state.objects) do
-        obj:render()
-    end
+  local w, h   = love.graphics.getDimensions()
+
+  for _, obj in pairs(state.objects) do
+      obj:render()
+  end
+
+  -- GUI Overlay
+  love.graphics.setColor(255, 255, 255, 255)
+  love.graphics.setFont(assets.fonts.kust)
+  love.graphics.print(state.mode, 40, 24)
+
+  -- Ball tag
+  local ball = state.objects.ball
+  local name = 'ball'
+  local r    = ball.shape:getRadius()
+  local dx, dy = unpack({ assets.fonts.kust:getWidth(name), assets.fonts.kust:getHeight(name) })
+
+  love.graphics.setColor(46, 13, 52, 255)
+  love.graphics.setFont(assets.fonts.kust)
+  love.graphics.print(name, ball.x-dx/2, ball.shape:getPoint()-r-5)
+
+  -- Paused
+  if not state.running then
+    love.graphics.setFont(assets.fonts.bigKust)
+    local dx, dy = unpack({ assets.fonts.bigKust:getWidth('Paused'), assets.fonts.bigKust:getHeight('Paused') })
+
+    love.graphics.setColor(0, 0, 0, 160)
+    love.graphics.rectangle('fill', 0, 0, w, h)
+    love.graphics.setColor(21, 185, 126, 255)
+    love.graphics.print('Paused', (w-dx)/2, (h-dy)/2)
+  end
 end
