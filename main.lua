@@ -2,115 +2,110 @@
 -- Jonatan H Sundqvist
 -- June 25 2016
 
+require "src.love_utils"
+require "src.utils"
 
+class = require "src.lib.30log-llama"
 
-function createObject(world, pos, shape, density, type)
-  --
-  o = {}
-  o.body    = love.physics.newBody(world, pos.x, pos.y, type) -- Body type is either 'dynamic', 'static' or 'kinematic'
-  o.shape   = shape
-  o.fixture = love.physics.newFixture(o.body, o.shape, density)
-  return o
+local Object = class()
+
+function Object:__init(state, pos, shape, density, body_type)
+    self._state = state -- Cache for later
+
+    self.body    = love.physics.newBody(state.world, pos.x, pos.y, body_type) -- Body type is either 'dynamic', 'static' or 'kinematic'
+    self.shape   = shape
+    self.fixture = love.physics.newFixture(self.body, self.shape, density)
+    self.color = {50, 50, 50}
+end
+
+Object:property(
+    "x",
+    function(self) return self.body:getX() end,
+    function(self, v) return self.body:setX(v) end
+)
+
+Object:property(
+    "y",
+    function(self) return self.body:getY() end,
+    function(self, v) return self.body:setY(v) end
+)
+
+function Object:render(options)
+    love.graphics.setColor(unpack(self.color))
+    local shape_type = self.shape:getType()
+    if shape_type == "circle" then
+        love.graphics.circle('fill', self.x, self.y, self.shape:getRadius())
+    elseif shape_type == "polygon" then
+        love.graphics.polygon('fill', self.body:getWorldPoints(self.shape:getPoints()))
+    end
 end
 
 
-function renderObject(o, options)
+function love.load()
+    assets = {}
+    assets.fonts = {}
+    assets.fonts.alameda = love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30)
+    assets.fonts.kust = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
+
+    state = {}
+    state.mode = "interactive"
+    love.physics.setMeter(64) --the height of a meter our worlds will be 64px
+    state.world = love.physics.newWorld(0, 9.81*64, true) --create a world for the bodies to exist in with horizontal gravity of 0 and vertical gravity of 9.81
+
+    -- table to hold all our physical objects
+    local w, h = love.graphics.getDimensions()
+
+    state.objects = {}
+    state.objects.ground = Object(state, { x=w/2, y=h-50/2 },       love.physics.newRectangleShape(w, 50),  3, 'static')
+    state.objects.ground.color = {25, 190, 105}
+    state.objects.ball = Object(state, { x=w/2, y=h/2},           love.physics.newCircleShape(20),         3, 'dynamic')
+    state.objects.ball.fixture:setRestitution(0.8) -- Let the ball bounce
+    state.objects.ball.color = {193, 47, 14}
+    state.objects.block1 = Object(state, { x=w/2, y=h-100/2 },      love.physics.newRectangleShape(50, 100), 5, 'dynamic')
+    state.objects.block2 = Object(state, { x=w/2, y=h-100/2-50/2 }, love.physics.newRectangleShape(100, 50), 5, 'dynamic')
+
+    for i=1,8 do
+        local new_object = Object(state, { x=(i*60)+(w/2)-600, y=h-140/2 }, love.physics.newRectangleShape(24, 140), 8, 'dynamic')
+        table.insert(state.objects, new_object)
+    end
+
+    love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
+    love.graphics.setFont(assets.fonts.kust)
+end
+
+
+function love.update(dt)
   --
-  love.graphics.setColor(50, 50, 50) -- set the drawing color to grey for the blocks
-  love.graphics.polygon('fill', o.body:getWorldPoints(o.shape:getPoints()))
+  state.world:update(dt) --this puts the world into motion
+
+  --here we are going to create some keyboard events
+  if love.keyboard.isDown('right') then --press the right arrow key to push the ball to the right
+      state.objects.ball.body:applyForce(400, 0)
+  elseif love.keyboard.isDown('left') then --press the left arrow key to push the ball to the left
+      state.objects.ball.body:applyForce(-400, 0)
+  elseif love.keyboard.isDown('up') then --press the up arrow key to set the ball in the air
+      state.objects.ball.body:setPosition(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+  elseif love.keyboard.isDown('space') then --press the left arrow key to push the ball to the left
+      state.objects.ball.body:applyForce(0, -400)
+  end
+
+  state.mode = love.keyboard.isDown('tab') and 'editor' or 'interactive'
 end
 
 
 function love.mousepressed(mx, my, button, istouch)
   --
-  if love.keyboard.isDown('tab') then
-    if button == 1 then
-      objects['random' .. (#objects)] = createObject(world, { x=mx, y=my }, love.physics.newRectangleShape(math.random(50, 60), math.random(50, 60)), 5, 'dynamic')
-    end
+  if love.keyboard.isDown('tab') and (button == 1) then
+    table.insert(state.objects, Object(state, { x=mx, y=my }, love.physics.newRectangleShape(math.random(50, 60), math.random(50, 60)), 5, 'dynamic'))
   end
 end
 
-
-function love.load()
-  --
-  fonts = {
-    alameda=love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30),
-    kust=love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
-  }
-
-  love.graphics.setFont(fonts.kust)
-
-  settings = {
-    mode='interactive',
-    screenSize={ cx=720, cy=480 }
-  }
-
-  --
-  love.physics.setMeter(64) --the height of a meter our worlds will be 64px
-  world = love.physics.newWorld(0, 9.81*64, true) --create a world for the bodies to exist in with horizontal gravity of 0 and vertical gravity of 9.81
-
-  -- table to hold all our physical objects
-  cx = settings.screenSize.cx
-  cy = settings.screenSize.cy
-
-  objects = {
-    ground = createObject(world, { x=cx/2, y=cy-50/2 },       love.physics.newRectangleShape(cx, 50),  3, 'static'),
-    ball   = createObject(world, { x=cx/2, y=cy/2},           love.physics.newCircleShape(20),         3, 'dynamic'),
-    block1 = createObject(world, { x=cx/2, y=cy-100/2 },      love.physics.newRectangleShape(50, 100), 5, 'dynamic'),
-    block2 = createObject(world, { x=cx/2, y=cy-100/2-50/2 }, love.physics.newRectangleShape(100, 50), 5, 'dynamic')
-
-    -- car = {
-    --   frame      = createObject(world, { x=410, y=260 }, love.physics.newRectangleShape(0, 0, 120, 70), 5, 'dynamic'),
-    --   leftWheel  = createObject(world, { x=360, y=260 }, love.physics.newCircleShape(50),               5, 'dynamic'),
-    --   rightWheel = createObject(world, { x=460, y=260 }, love.physics.newCircleShape(50),               5, 'dynamic')
-    -- }
-  }
-
-  for i=1,8 do
-    -- print('Adding object ' .. i)
-    objects[i] = createObject(world, { x=(i*60)+(cx/2)-600, y=cy-140/2 }, love.physics.newRectangleShape(24, 140), 8, 'dynamic')
-  end
-
-  -- Additional settings
-  objects.ball.fixture:setRestitution(0.8) -- Let the ball bounce
-
-  -- Initial graphics setup
-  love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
-  love.window.setMode(cx, cy)                     -- Set the window dimensions to 650 by 650
-
-end
-
-
-function love.update(dt)
-  world:update(dt) --this puts the world into motion
-
-  --here we are going to create some keyboard events
-  if love.keyboard.isDown('right') then --press the right arrow key to push the ball to the right
-    objects.ball.body:applyForce(400, 0)
-  elseif love.keyboard.isDown('left') then --press the left arrow key to push the ball to the left
-    objects.ball.body:applyForce(-400, 0)
-  elseif love.keyboard.isDown('up') then --press the up arrow key to set the ball in the air
-    objects.ball.body:setPosition(cx/2, cy/2)
-    objects.ball.body:setLinearVelocity(0, 0) --we must set the velocity to zero to prevent a potentially large velocity generated by the change in position
-  elseif love.keyboard.isDown('space') then --press the left arrow key to push the ball to the left
-    objects.ball.body:applyForce(0, -400)
-  end
-
-end
 
 function love.draw()
-  love.graphics.setColor(25, 190, 105)
-  love.graphics.polygon('fill', objects.ground.body:getWorldPoints(objects.ground.shape:getPoints())) -- draw a 'filled in' polygon using the ground's coordinates
+    love.graphics.setColor(255, 255, 255, 255)
+    love.graphics.print(state.mode, 40, 24)
 
-  love.graphics.setColor(193, 47, 14) --set the drawing color to red for the ball
-  love.graphics.circle('fill', objects.ball.body:getX(), objects.ball.body:getY(), objects.ball.shape:getRadius())
-
-  love.graphics.print(settings.mode, 40, 24)
-
-  -- , objects.car.leftWheel, objects.car.rightWheel, objects.car.frame
-  local renderables = { objects.block1, objects.block2, objects[1], objects[2], objects[3], objects[4], objects[5], objects[6], objects[7], objects[8] }
-  for i, o in ipairs(renderables) do
-    -- print(i, o)
-    renderObject(o, {})
-  end
+    for _, obj in pairs(state.objects) do
+        obj:render()
+    end
 end
