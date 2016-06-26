@@ -17,7 +17,6 @@ end
 function renderObject(o, options)
   --
   love.graphics.setColor(50, 50, 50) -- set the drawing color to grey for the blocks
-  print(o.body:getWorldPoints(o.shape:getPoints()))
   love.graphics.polygon('fill', o.body:getWorldPoints(o.shape:getPoints()))
 end
 
@@ -45,10 +44,10 @@ function love.load()
   cy = settings.screenSize.cy
 
   objects = {
-    ground = createObject(world, { x=cx/2,    y=cy-50/2 },     love.physics.newRectangleShape(cx, 50),         3, 'static'),
-    ball   = createObject(world, { x=cx/2,    y=cy/2},         love.physics.newCircleShape(20),                3, 'dynamic'),
-    block1 = createObject(world, { x=cx/2-20, y=550 },         love.physics.newRectangleShape(0, 0,  50, 100), 5, 'dynamic'),
-    block2 = createObject(world, { x=cx/2-20, y=550-10-50/2 }, love.physics.newRectangleShape(0, 0, 100, 50),  5, 'dynamic')
+    ground = createObject(world, { x=cx/2, y=cy-50/2 },       love.physics.newRectangleShape(cx, 50),  3, 'static'),
+    ball   = createObject(world, { x=cx/2, y=cy/2},           love.physics.newCircleShape(20),         3, 'dynamic'),
+    block1 = createObject(world, { x=cx/2, y=cy-100/2 },      love.physics.newRectangleShape(50, 100), 5, 'dynamic'),
+    block2 = createObject(world, { x=cx/2, y=cy-100/2-50/2 }, love.physics.newRectangleShape(100, 50), 5, 'dynamic')
 
     -- car = {
     --   frame      = createObject(world, { x=410, y=260 }, love.physics.newRectangleShape(0, 0, 120, 70), 5, 'dynamic'),
@@ -59,7 +58,7 @@ function love.load()
 
   for i=1,8 do
     -- print('Adding object ' .. i)
-    -- objects[i] = createObject(world, { x=(i*60)+(cx/2)-600, y=cy-120/2 }, love.physics.newRectangleShape(30, 120), 4, 'dynamic')
+    objects[i] = createObject(world, { x=(i*60)+(cx/2)-600, y=cy-140/2 }, love.physics.newRectangleShape(24, 140), 8, 'dynamic')
   end
 
   -- Additional settings
@@ -105,7 +104,7 @@ function love.draw()
   love.graphics.print(settings.mode, 40, 24)
 
   -- , objects.car.leftWheel, objects.car.rightWheel, objects.car.frame
-  local renderables = { objects.block1, objects.block2 }
+  local renderables = { objects.block1, objects.block2, objects[1], objects[2], objects[3], objects[4], objects[5], objects[6], objects[7], objects[8] }
   for i, o in ipairs(renderables) do
     -- print(i, o)
     renderObject(o, {})
