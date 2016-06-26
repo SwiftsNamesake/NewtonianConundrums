@@ -2,7 +2,10 @@
 -- Jonatan H Sundqvist
 -- June 25 2016
 
+require "src.love_utils"
+require "src.utils"
 
+class = require "src.lib.30log-llama"
 
 function createObject(world, pos, shape, density, type)
   --
