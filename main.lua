@@ -5,21 +5,21 @@
 require 'src.love_utils'
 require 'src.utils'
 
-class = require 'src.lib.30log-llama'
+class  = require 'src.lib.30log-llama'
 Camera = require 'src.Camera'
 
 local Object = class()
 
 function Object:__init(state, pos, shape, density, body_type)
     self._state = state -- Cache for later
-
     self.body    = love.physics.newBody(state.world, pos.x, pos.y, body_type) -- Body type is either 'dynamic', 'static' or 'kinematic'
     self.shape   = shape
     self.fixture = love.physics.newFixture(self.body, self.shape, density)
     self.color = {50, 50, 50}
-    
+
     self.fixture:setUserData(self)
 end
+
 
 Object:property(
     'x',
@@ -27,11 +27,13 @@ Object:property(
     function(self, v) return self.body:setX(v) end
 )
 
+
 Object:property(
     'y',
     function(self) return self.body:getY() end,
     function(self, v) return self.body:setY(v) end
 )
+
 
 function Object:render(options)
     love.graphics.setColor(unpack(self.color))
@@ -41,30 +43,49 @@ function Object:render(options)
     elseif shape_type == 'polygon' then
         love.graphics.polygon('fill', self.body:getWorldPoints(self.shape:getPoints()))
     end
-    
+
     if self._state.mode == 'editor' then
         love.graphics.setColor(255, 255, 255, 255)
         local vx, vy = self.body:getLinearVelocity()
         local av = self.body:getAngularVelocity()
-        
+
         local x1, y1, x2, y2 = self.x, self.y, self.x + vx / 2, self.y + vy / 2
         local angle = - math.angle(x1, y1, x2, y2) - math.pi/2
-        
+
         love.graphics.line(x1, y1, x2, y2)
         love.graphics.arc('line', 'open', self.x, self.y, 16, angle, angle + av / 2)
     end
 end
 
+
+Object:property(
+  'x',
+  function(self) return self.body:getX() end,
+  function(self, v) return self.body:setX(v) end
+)
+
+
+Object:property(
+  'y',
+  function(self) return self.body:getY() end,
+  function(self, v) return self.body:setY(v) end
+)
+
+
+
 function Object:testPoint(x, y)
     return self.shape:testPoint(self.x, self.y, self.body:getAngle(), x, y)
 end
 
+
 function love.load()
     assets = {}
     assets.fonts = {}
-    assets.fonts.alameda = love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30)
-    assets.fonts.kust    = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
-    assets.fonts.bigKust = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 136)
+    assets.fonts.alameda  = love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30)
+    assets.fonts.elixia   = love.graphics.newFont('assets/fonts/elixia.ttf',   30)
+    assets.fonts.aclonica = love.graphics.newFont('assets/fonts/aclonica.ttf', 30)
+    assets.fonts.kust     = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
+    assets.fonts.bigKust  = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 136)
 
     state = {}
     state.mode = 'interactive'
@@ -105,7 +126,7 @@ callbacks = {}
 function callbacks.beginContact(a, b, coll)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
     local cb_a, cb_b = (obj_a.beginContact or noop), (obj_b.beginContact or noop)
-    
+
     cb_a(obj_a, obj_b, coll)
     cb_b(obj_b, obj_a, coll)
 end
@@ -114,7 +135,7 @@ end
 function callbacks.endContact(a, b, coll)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
     local cb_a, cb_b = (obj_a.endContact or noop), (obj_b.endContact or noop)
-    
+
     cb_a(obj_a, obj_b, coll)
     cb_b(obj_b, obj_a, coll)
 end
@@ -123,7 +144,7 @@ end
 function callbacks.preSolve(a, b, coll)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
     local cb_a, cb_b = (obj_a.preSolve or noop), (obj_b.preSolve or noop)
-    
+
     cb_a(obj_a, obj_b, coll)
     cb_b(obj_b, obj_a, coll)
 end
@@ -132,7 +153,7 @@ end
 function callbacks.postSolve(a, b, coll, normalimpulse, tangentimpulse)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
     local cb_a, cb_b = (obj_a.postSolve or noop), (obj_b.postSolve or noop)
-    
+
     cb_a(obj_a, obj_b, coll, normalimpulse, tangentimpulse)
     cb_b(obj_b, obj_a, coll, normalimpulse, tangentimpulse)
 end
@@ -156,6 +177,7 @@ function love.update(dt)
     end
 end
 
+
 function love.mousepressed(mx, my, button, istouch)
     local wx, wy = state.camera:getMousePosition()
     if state.mode == 'editor' then
@@ -165,7 +187,7 @@ function love.mousepressed(mx, my, button, istouch)
             o.color = { math.random(0, 255), math.random(0, 255), math.random(0, 255), 255 }
             table.insert(state.objects, o)
         end
-        
+
         if state.editor.tool == 'drag' and button == 1 then
             local closest = 999
             local obj_to_drag = nil
@@ -176,11 +198,12 @@ function love.mousepressed(mx, my, button, istouch)
                     obj_to_drag = obj
                 end
             end
-            
+
             state.editor.dragged_object = obj_to_drag
         end
     end
 end
+
 
 function love.mousereleased(mx, my, button, istouch)
     if button == 1 then
@@ -188,17 +211,19 @@ function love.mousereleased(mx, my, button, istouch)
     end
 end
 
+
 function love.mousemoved(x, y, dx, dy)
     if love.mouse.isDown(2) then
         state.camera:move(-dx * state.camera.sx, -dy * state.camera.sy)
     end
-    
+
     local dragged_object = state.editor.dragged_object
     if state.mode == 'editor' and dragged_object ~= nil then
         dragged_object.x = dragged_object.x + dx * state.camera.sx
         dragged_object.y = dragged_object.y + dy * state.camera.sy
     end
 end
+
 
 function love.wheelmoved(x, y)
     local dragged_object = state.editor.dragged_object
@@ -214,27 +239,27 @@ function love.wheelmoved(x, y)
     end
 end
 
+
 function love.keypressed(key, scancode, isrepeat)
     if key == 'p' and not isrepeat then
         state.running = not state.running
     end
-    
+
     if key == 'tab' and not isrepeat then
         state.mode = (state.mode == 'interactive') and 'editor' or 'interactive'
     end
-    
+
     if key == '1' then
         state.editor.tool = 'drag'
     elseif key == '2' then
         state.editor.tool = 'random_shape'
     end
-    
 end
 
 
 function love.draw()
     local w, h   = love.graphics.getDimensions()
-    
+
     state.camera:set()
     for _, obj in pairs(state.objects) do
         obj:render()
@@ -268,5 +293,5 @@ function love.draw()
         love.graphics.rectangle('fill', 0, 0, w, h)
         love.graphics.setColor(21, 185, 126, 255)
         love.graphics.print('Paused', (w-dx)/2, (h-dy)/2)
-        end
+    end
 end
