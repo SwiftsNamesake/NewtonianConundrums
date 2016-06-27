@@ -70,5 +70,7 @@ pprint = function(...)
     print(unpack(r))
 end
 
+noop = function() end
+
 -- A function that throws an error
 function unimplemented() error("Unimplemented function called", 2) end
