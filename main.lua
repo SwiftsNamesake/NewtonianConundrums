@@ -2,90 +2,34 @@
 -- Jonatan H Sundqvist
 -- June 25 2016
 
+
 require 'src.love_utils'
 require 'src.utils'
+require 'src.utils.collections'
 
 class  = require 'src.lib.30log-llama'
 Camera = require 'src.Camera'
 
-local Object = class()
-
-function Object:__init(state, pos, shape, density, body_type)
-    self._state = state -- Cache for later
-    self.body    = love.physics.newBody(state.world, pos.x, pos.y, body_type) -- Body type is either 'dynamic', 'static' or 'kinematic'
-    self.shape   = shape
-    self.fixture = love.physics.newFixture(self.body, self.shape, density)
-    self.color = {50, 50, 50}
-
-    self.fixture:setUserData(self)
-end
+vec    = require 'src.vec'
+shapes = require 'src.shapes'
+render = require 'src.render'
+Object = require 'src.Object'
 
 
-Object:property(
-    'x',
-    function(self) return self.body:getX() end,
-    function(self, v) return self.body:setX(v) end
-)
+assets = {}
 
-
-Object:property(
-    'y',
-    function(self) return self.body:getY() end,
-    function(self, v) return self.body:setY(v) end
-)
-
-
-function Object:render(options)
-    love.graphics.setColor(unpack(self.color))
-    local shape_type = self.shape:getType()
-    if shape_type == 'circle' then
-        love.graphics.circle('fill', self.x, self.y, self.shape:getRadius())
-    elseif shape_type == 'polygon' then
-        love.graphics.polygon('fill', self.body:getWorldPoints(self.shape:getPoints()))
-    end
-
-    if self._state.mode == 'editor' then
-        love.graphics.setColor(255, 255, 255, 255)
-        local vx, vy = self.body:getLinearVelocity()
-        local av = self.body:getAngularVelocity()
-
-        local x1, y1, x2, y2 = self.x, self.y, self.x + vx / 2, self.y + vy / 2
-        local angle = - math.angle(x1, y1, x2, y2) - math.pi/2
-
-        love.graphics.line(x1, y1, x2, y2)
-        love.graphics.arc('line', 'open', self.x, self.y, 16, angle, angle + av / 2)
-    end
-end
-
-
-Object:property(
-  'x',
-  function(self) return self.body:getX() end,
-  function(self, v) return self.body:setX(v) end
-)
-
-
-Object:property(
-  'y',
-  function(self) return self.body:getY() end,
-  function(self, v) return self.body:setY(v) end
-)
-
-
-
-function Object:testPoint(x, y)
-    return self.shape:testPoint(self.x, self.y, self.body:getAngle(), x, y)
+function assets.loadFont(fn)
+    -- TODO: Rename (?)
+    return defaultdict(function (size) return love.graphics.newFont(fn, size) end)
 end
 
 
 function love.load()
-    assets = {}
     assets.fonts = {}
-    assets.fonts.alameda  = love.graphics.newFont('assets/fonts/alameda/alameda.ttf', 30)
-    assets.fonts.elixia   = love.graphics.newFont('assets/fonts/elixia.ttf',   30)
-    assets.fonts.aclonica = love.graphics.newFont('assets/fonts/aclonica.ttf', 30)
-    assets.fonts.kust     = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 30)
-    assets.fonts.bigKust  = love.graphics.newFont('assets/fonts/Kust_Free_Brush_Font/kust.otf', 136)
+    assets.fonts.alameda  = assets.loadFont('assets/fonts/alameda/alameda.ttf')
+    assets.fonts.elixia   = assets.loadFont('assets/fonts/elixia.ttf')
+    assets.fonts.aclonica = assets.loadFont('assets/fonts/aclonica.ttf')
+    assets.fonts.kust     = assets.loadFont('assets/fonts/Kust_Free_Brush_Font/kust.otf')
 
     state = {}
     state.mode = 'interactive'
@@ -117,7 +61,7 @@ function love.load()
     end
 
     love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
-    love.graphics.setFont(assets.fonts.kust)
+    love.graphics.setFont(assets.fonts.kust[30])
 end
 
 
@@ -160,6 +104,10 @@ end
 
 
 function love.update(dt)
+
+    -- Universal events
+
+    -- Mode-specific events
     if state.running and state.mode == 'interactive' then
         state.world:update(dt) --this puts the world into motion
 
@@ -241,18 +189,19 @@ end
 
 
 function love.keypressed(key, scancode, isrepeat)
-    if key == 'p' and not isrepeat then
-        state.running = not state.running
-    end
 
-    if key == 'tab' and not isrepeat then
-        state.mode = (state.mode == 'interactive') and 'editor' or 'interactive'
-    end
+    -- TODO: Does Lua cache local constants?
+    local keymap = {
+        escape = function(key, scancode, isrepeat) love.event.quit(0) end,
+        p      = function(key, scancode, isrepeat) state.running = not state.running end,
+        tab    = function(key, scancode, isrepeat) state.mode = (state.mode == 'interactive') and 'editor' or 'interactive' end,
+        ['1']  = function(key, scancode, isrepeat) state.editor.tool = 'drag' end,
+        ['2']  = function(key, scancode, isrepeat) state.editor.tool = 'random_shape' end
+    }
 
-    if key == '1' then
-        state.editor.tool = 'drag'
-    elseif key == '2' then
-        state.editor.tool = 'random_shape'
+    -- TODO: Use safeget...
+    if not isrepeat and keymap[key] then
+        keymap[key](key, scancode, isrepeat)
     end
 end
 
@@ -268,7 +217,7 @@ function love.draw()
 
     -- GUI Overlay
     love.graphics.setColor(255, 255, 255, 255)
-    love.graphics.setFont(assets.fonts.kust)
+    love.graphics.setFont(assets.fonts.kust[30])
     love.graphics.print(state.mode, 40, 24)
     if state.mode == 'editor' then
         love.graphics.print('Tool: ' .. state.editor.tool, 40, 48)
@@ -278,20 +227,35 @@ function love.draw()
     local ball = state.objects.ball
     local name = 'ball'
     local r    = ball.shape:getRadius()
-    local dx, dy = unpack({ assets.fonts.kust:getWidth(name), assets.fonts.kust:getHeight(name) })
+    local font = assets.fonts.kust[22]
+    local dx, dy = unpack({ font:getWidth(name), font:getHeight(name) })
 
     love.graphics.setColor(46, 13, 52, 255)
-    love.graphics.setFont(assets.fonts.kust)
+    love.graphics.setFont(font)
     love.graphics.print(name, ball.x-dx/2, ball.shape:getPoint()-r-5)
 
     -- Paused
     if not state.running then
-        love.graphics.setFont(assets.fonts.bigKust)
-        local dx, dy = unpack({ assets.fonts.bigKust:getWidth('Paused'), assets.fonts.bigKust:getHeight('Paused') })
+        local font = assets.fonts.kust[128]
+        love.graphics.setFont(font)
+        local dx, dy = unpack({ font:getWidth('Paused'), font:getHeight('Paused') })
 
         love.graphics.setColor(0, 0, 0, 160)
         love.graphics.rectangle('fill', 0, 0, w, h)
         love.graphics.setColor(21, 185, 126, 255)
         love.graphics.print('Paused', (w-dx)/2, (h-dy)/2)
     end
+
+    -- Test arrow
+    -- print(#shapes.flatten(shapes.arrow(vec(x1, y1), vec(x2, y2), 0.7, 1, 2)))
+    local fr = vec(w, h):scale(0.5)
+    local to = fr+vec.fromPolar({ mag=80, arg=math.fmod(love.timer.getTime(), 2*math.pi) })
+    local ratio = 0.6 --0.2 + 0.7*0.5*(1+math.sin(love.timer.getTime()))
+    local arrow = shapes.arrow(fr, to, ratio, 20, 40)
+
+    -- love.graphics.setColor(118, 185, 8, 255)
+    -- love.graphics.setColor(8, 50, 8, 255)
+    -- love.graphics.setFont(assets.fonts.elixia[10])
+    render.debug.polygon(arrow, { triangulate=true, dotColor={118, 185, 8, 255}, textColor={8, 50, 8, 255}, font=assets.fonts.elixia[10] })
+
 end

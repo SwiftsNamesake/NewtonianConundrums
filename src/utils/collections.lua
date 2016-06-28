@@ -3,7 +3,7 @@ function defaultdict(default_value_factory)
     local mt = {
         __index = function(t, key)
             if not rawget(t, key) then
-                rawset(t, key, default_value_factory())
+                rawset(t, key, default_value_factory(key))
             end
             return rawget(t, key)
         end
