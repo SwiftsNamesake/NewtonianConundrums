@@ -1,27 +1,31 @@
+--
+
+
+moses = require 'src.lib.moses.moses'
+vec   = require 'src.vec'
+
+
 local Camera = class()
 
-function Camera:__init(x, y, sx, sy, angle, pixel_perfect)
-    self.x = x or 0
-    self.y = y or 0
-    self.sx = sx or 1
-    self.sy = sy or 1
-    self.angle = angle or 0.0
-    self.pixel_perfect = pixel_perfect or false
-end
 
+function Camera:__init(position, scale, angle, pixel_perfect)
+    self.position = position or vec(0,0) -- TODO: Use 'p' instead (?)
+    self.scale    = scale    or vec(1,1) --
+    self.angle    = angle or 0.0         -- TODO: This is in radians right (?)
+
+    self.pixel_perfect   = pixel_perfect or false                              --
+    self.pixel_operation = self.pixel_perfect and math.floor or moses.identity --
+end
 
 
 -- Push the camera onto the Love2D transformation stack
 function Camera:set()
     love.graphics.push()
-    love.graphics.scale(1 / self.sx, 1 / self.sy)
+    love.graphics.scale(self.scale:unpack()) -- TODO: Finish
     love.graphics.rotate(-self.angle)
-    if self.pixel_perfect then
-        love.graphics.translate(math.floor(-self.x), math.floor(-self.y))
-    else
-        love.graphics.translate(-self.x, -self.y)
-    end
+    love.graphics.translate((-self.position):dotwise(self.pixel_operation):unpack()) -- math.floor(-self.x), math.floor(-self.y)
 end
+
 
 -- Pop the camera from the Love2D transformation stack
 function Camera:unset()
@@ -29,85 +33,89 @@ function Camera:unset()
 end
 
 
-
-function Camera:move(dx, dy)
-    self.x = self.x + (dx or 0)
-    self.y = self.y + (dy or 0)
+function Camera:move(by)
+    -- print('Camera:move', by)
+    self.position = self.position + vec(by.x or 0, by.y or 0)
 end
+
 
 function Camera:rotate(dr)
     self.angle = self.angle + dr
 end
 
+
 -- TODO: Implement Camera:rotateAround
 -- function Camera:rotateAround(x, y, dr) end
 
-function Camera:scale(dsx, dsy)
-    self.sx = self.sx * dsx
-    self.sy = self.sy * (dsy or dsx)
+
+function Camera:scale(dscale)
+    self.scale = vec(dscale.x or self.scale.x, dscale.y or self.scale.y)
 end
 
-function Camera:scaleAround(x, y, dsx, dsy)
-    dsx = dsx or 1
-    dsy = dsy or dsx
-    self.sx = self.sx * dsx
-    self.sy = self.sy * dsy
-    self:move(-x, -y)
-    self.x = self.x * dsx
-    self.y = self.y * dsy
-    self:move(x, y)
+
+function Camera:scaleAround(point, dscale)
+    -- print('Camera:scaleAround', point, dscale, -point, -dscale)
+    self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
+    self:move(-point)                              -- Move the 'pinned' point to the origin
+    self.position = self.position:hadamard(dscale) -- Perform scaling
+    self:move(point)                               -- Move back
 end
 
-function Camera:setPosition(x, y)
-    self.x = x or self.x
-    self.y = y or self.y
+
+function Camera:setPosition(p)
+    self.position = vec(p.x or self.position.x, p.y or self.position.y)
 end
 
-function Camera:setScale(sx, sy)
-    self.sx = sx or self.sx
-    self.sy = sy or sx or self.sy
-end
 
+function Camera:setScale(scale)
+    self.position = vec(scale.x or self.scale.x, scale.y or self.scale.y)
+end
 
 
 function Camera:getMousePosition()
-    return self:getLocalPoint(love.mouse.getX(), love.mouse.getY())
+    -- print('Camera:getMousePosition', self)
+    return self:toLocalPoint(vec(love.mouse.getX(), love.mouse.getY()))
 end
 
 -- Translate world coordinate into local coordinate
-function Camera:getLocalPoint(world_x, world_y)
+function Camera:toLocalPoint(world_p)
     if self.angle == 0 then
-        return world_x * self.sx + self.x, world_y * self.sy + self.y
+        return world_p:hadamard(self.scale) + self.position
     else
+        -- TODO: Implement
         error("Rotation not yet fully implemented. Trigonometry is hard >__>")
     end
 end
 
+
 -- Translate local coordinate into world coordinate
-function Camera:getWorldPoint(local_x, local_y)
+function Camera:toWorldPoint(local_point)
     if self.angle == 0 then
-        return local_x * self.sx - self.x, local_y / self.sy - self.y
+        -- return vec(local_point.x/self.sx - self.x, local_point.y / self.sy - self.y)
+        return local_point:hadamard(self.scale:dotwise(math.inverse)) - self.position
     else
+        -- TODO: Implement
         error("Rotation not yet fully implemented. Trigonometry is hard <__<")
     end
 end
 
-function Camera:getLocalPoints(...)
+
+function Camera:toLocalPoints(...)
     local result = {}
     local args = {...}
     for i=0,#args/2-1 do
         local x, y = args[i*2+1], args[i*2+2]
-        table.extend(result, {self:getLocalPoint(x, y)})
+        table.extend(result, {self:toLocalPoint(x, y)})
     end
     return result
 end
 
-function Camera:getWorldPoints(...)
+function Camera:toWorldPoints(...)
     local result = {}
     local args = {...}
     for i=0,#args/2-1 do
         local x, y = args[i*2+1], args[i*2+2]
-        table.extend(result, {self:getWorldPoint(x, y)})
+        table.extend(result, {self:toWorldPoint(x, y)})
     end
     return result
 end

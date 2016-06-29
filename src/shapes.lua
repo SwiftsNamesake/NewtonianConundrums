@@ -22,7 +22,7 @@ function shapes.arrow(fr, to, ratio, shaftWidth, headWidth)
     --           shaftEnd = along from to sl --
     --           straight = along (0:+0) (normal from to) -- Vector perpendicular to the centre line
     local normal = (to-fr):normal():unit() -- (to-fr):arg() + math.pi*0.5
-    print(normal)                     --
+    -- print(normal)                     --
     local short  = normal:scale(shaftWidth/2) -- vec.fromPolar({ mag=shaftWidth/2, arg=normal }) --
     local long   = normal:scale(headWidth/2)  -- vec.fromPolar({ mag=headWidth/2,  arg=normal }) --
     local cutoff = fr + (to-fr)*vec(ratio, 0) --scale(ratio) --

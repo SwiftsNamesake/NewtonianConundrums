@@ -7,6 +7,9 @@ require 'src.love_utils'
 require 'src.utils'
 require 'src.utils.collections'
 
+moses = require 'src.lib.moses.moses'
+
+json   = require 'src.lib.dkjson'
 class  = require 'src.lib.30log-llama'
 Camera = require 'src.Camera'
 
@@ -41,24 +44,35 @@ function love.load()
     state.world = love.physics.newWorld(0, 9.81*64, true) --create a world for the bodies to exist in with horizontal gravity of 0 and vertical gravity of 9.81
     state.camera = Camera()
 
+    state.interactive = {}
+    state.interactive.pin = nil -- Object that is pinned by the mouse
+
     state.world:setCallbacks(callbacks.beginContact, callbacks.endContact, callbacks.preSolve, callbacks.postSolve)
 
     -- table to hold all our physical objects
     local w, h = love.graphics.getDimensions()
-
     state.objects = {}
-    state.objects.ground = Object(state, { x=w/2, y=h-50/2 },       love.physics.newRectangleShape(w, 50),  3, 'static')
-    state.objects.ground.color = {25, 190, 105}
-    state.objects.ball = Object(state, { x=w/2, y=h/2},           love.physics.newCircleShape(20),         3, 'dynamic')
+
+    local ps = { vec(0,0), vec(200, 300):scale(4.2), vec(400, -30):scale(4.2), vec(250, -200):scale(4.2) }
+
+    state.objects.ball = Object(state, vec(w/2, h/2), love.physics.newCircleShape(20), 3, 'dynamic')
     state.objects.ball.fixture:setRestitution(0.8) -- Let the ball bounce
     state.objects.ball.color = {193, 47, 14}
-    state.objects.block1 = Object(state, { x=w/2, y=h-100/2 },      love.physics.newRectangleShape(50, 100), 5, 'dynamic')
-    state.objects.block2 = Object(state, { x=w/2, y=h-100/2-50/2 }, love.physics.newRectangleShape(100, 50), 5, 'dynamic')
 
-    for i=1,8 do
-        local new_object = Object(state, { x=(i*60)+(w/2)-600, y=h-140/2 }, love.physics.newRectangleShape(24, 140), 8, 'dynamic')
-        table.insert(state.objects, new_object)
+    for i, p in pairs(ps) do
+        table.insert(state.objects, Object(state, p+vec(w/2, h-50/2), love.physics.newRectangleShape(w, 50),  3, 'static'))
+        state.objects[#state.objects].color = {25, 190, 105}
+        table.insert(state.objects, Object(state, p+vec(w/2, h-100/2),      love.physics.newRectangleShape(50, 100), 5, 'dynamic'))
+        table.insert(state.objects, Object(state, p+vec(w/2, h-100/2-50/2), love.physics.newRectangleShape(100, 50), 5, 'dynamic'))
+
+        for i=1,8 do
+            local new_object = Object(state, p+vec((i*60)+(w/2)-600, h-140/2), love.physics.newRectangleShape(24, 140), 8, 'dynamic')
+            table.insert(state.objects, new_object)
+        end
     end
+
+    state.joints = {}
+    state.joints.mouse = love.physics.newMouseJoint(state.objects[#state.objects].body, love.mouse.getPosition())
 
     love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
     love.graphics.setFont(assets.fonts.kust[30])
@@ -67,30 +81,28 @@ end
 
 callbacks = {}
 
-function callbacks.beginContact(a, b, coll)
+
+function callbacks.delegate(a, b, coll, collisionType)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a.beginContact or noop), (obj_b.beginContact or noop)
+    local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
 
     cb_a(obj_a, obj_b, coll)
     cb_b(obj_b, obj_a, coll)
+end
+
+
+function callbacks.beginContact(a, b, coll)
+    callbacks.delegate(a, b, coll, 'beginContact')
 end
 
 
 function callbacks.endContact(a, b, coll)
-    local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a.endContact or noop), (obj_b.endContact or noop)
-
-    cb_a(obj_a, obj_b, coll)
-    cb_b(obj_b, obj_a, coll)
+    callbacks.delegate(a, b, coll, 'endContact')
 end
 
 
 function callbacks.preSolve(a, b, coll)
-    local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a.preSolve or noop), (obj_b.preSolve or noop)
-
-    cb_a(obj_a, obj_b, coll)
-    cb_b(obj_b, obj_a, coll)
+    callbacks.delegate(a, b, coll, 'preSolve')
 end
 
 
@@ -105,7 +117,8 @@ end
 
 function love.update(dt)
 
-    -- Universal events
+    -- Universal update logic (independent of modes)
+    state.joints.mouse:setTarget(state.camera:getMousePosition():unpack())
 
     -- Mode-specific events
     if state.running and state.mode == 'interactive' then
@@ -128,6 +141,8 @@ end
 
 function love.mousepressed(mx, my, button, istouch)
     local wx, wy = state.camera:getMousePosition()
+
+    -- Editor mode
     if state.mode == 'editor' then
         if state.editor.tool == 'random_shape' and button == 1 then
             local shape = (math.random() > 0.5) and love.physics.newRectangleShape(math.random(20, 120), math.random(20, 120)) or love.physics.newCircleShape(math.random(10, 60))
@@ -150,6 +165,11 @@ function love.mousepressed(mx, my, button, istouch)
             state.editor.dragged_object = obj_to_drag
         end
     end
+
+    -- Interactive mode
+    if state.mode == 'editor' then
+
+    end
 end
 
 
@@ -162,13 +182,14 @@ end
 
 function love.mousemoved(x, y, dx, dy)
     if love.mouse.isDown(2) then
-        state.camera:move(-dx * state.camera.sx, -dy * state.camera.sy)
+        -- state.camera:move(vec(-dx * state.camera.scale.x, -dy * state.camera.scale.y))
+        state.camera:move(vec(-dx, -dy):hadamard(state.camera.scale))
     end
 
     local dragged_object = state.editor.dragged_object
     if state.mode == 'editor' and dragged_object ~= nil then
-        dragged_object.x = dragged_object.x + dx * state.camera.sx
-        dragged_object.y = dragged_object.y + dy * state.camera.sy
+        dragged_object.x = dragged_object.x + dx * state.camera.scale.x
+        dragged_object.y = dragged_object.y + dy * state.camera.scale.y
     end
 end
 
@@ -178,12 +199,7 @@ function love.wheelmoved(x, y)
     if state.mode == 'editor' and dragged_object ~= nil then
         dragged_object.body:setAngle(dragged_object.body:getAngle() + y * 0.1)
     else
-        local wx, wy = state.camera:getMousePosition()
-        if y >= 0 then
-            state.camera:scaleAround(wx, wy, 0.8, 0.8)
-        else
-            state.camera:scaleAround(wx, wy, 1.25, 1.25)
-        end
+        state.camera:scaleAround(state.camera:getMousePosition(), (y >= 0) and vec(0.8, 0.8) or vec(1.25, 1.25))
     end
 end
 
@@ -207,12 +223,20 @@ end
 
 
 function love.draw()
-    local w, h   = love.graphics.getDimensions()
+    local w, h = love.graphics.getDimensions()
 
     state.camera:set()
+
     for _, obj in pairs(state.objects) do
         obj:render()
     end
+
+    -- Ball tag
+    local ball = state.objects.ball
+    love.graphics.setColor(46, 13, 52, 255)
+    love.graphics.setFont(assets.fonts.kust[22])
+    render.anchoredText('ball', ball.position-vec(0, ball.shape:getRadius()+2), vec(0.5, 1))
+
     state.camera:unset()
 
     -- GUI Overlay
@@ -222,17 +246,6 @@ function love.draw()
     if state.mode == 'editor' then
         love.graphics.print('Tool: ' .. state.editor.tool, 40, 48)
     end
-
-    -- Ball tag
-    local ball = state.objects.ball
-    local name = 'ball'
-    local r    = ball.shape:getRadius()
-    local font = assets.fonts.kust[22]
-    local dx, dy = unpack({ font:getWidth(name), font:getHeight(name) })
-
-    love.graphics.setColor(46, 13, 52, 255)
-    love.graphics.setFont(font)
-    love.graphics.print(name, ball.x-dx/2, ball.shape:getPoint()-r-5)
 
     -- Paused
     if not state.running then
@@ -245,17 +258,5 @@ function love.draw()
         love.graphics.setColor(21, 185, 126, 255)
         love.graphics.print('Paused', (w-dx)/2, (h-dy)/2)
     end
-
-    -- Test arrow
-    -- print(#shapes.flatten(shapes.arrow(vec(x1, y1), vec(x2, y2), 0.7, 1, 2)))
-    local fr = vec(w, h):scale(0.5)
-    local to = fr+vec.fromPolar({ mag=80, arg=math.fmod(love.timer.getTime(), 2*math.pi) })
-    local ratio = 0.6 --0.2 + 0.7*0.5*(1+math.sin(love.timer.getTime()))
-    local arrow = shapes.arrow(fr, to, ratio, 20, 40)
-
-    -- love.graphics.setColor(118, 185, 8, 255)
-    -- love.graphics.setColor(8, 50, 8, 255)
-    -- love.graphics.setFont(assets.fonts.elixia[10])
-    render.debug.polygon(arrow, { triangulate=true, dotColor={118, 185, 8, 255}, textColor={8, 50, 8, 255}, font=assets.fonts.elixia[10] })
 
 end

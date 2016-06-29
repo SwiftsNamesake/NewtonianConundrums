@@ -109,7 +109,7 @@ end
 
 function vec:divide(other)
     print('vec:divide has not been implemented!')
-    return -- TODO: Implement
+    return -- TODO: Implement (multiply by conjugate, yada yada yawn)
 end
 
 
@@ -118,6 +118,25 @@ function vec:dot(other)
     return vec(self.x*other.x + self.y+other.y, 0)
 end
 
+
+
+function vec:angle(other)
+    -- return math.atan2( x1 - x2,  y1 - y2 )
+    -- I'll help myself to this lovely trig function. Thanks, Arek!
+    return math.atan2((self-other):unpack())
+end
+
+
+function vec:hadamard(other)
+    -- Multiplies two vectors component-wise
+    return vec(self.x*other.x, self.y*other.y)
+end
+
+
+function vec:dotwise(f)
+    -- Maps a function onto each component. Not to be confused with the dot product.
+    return vec(f(self.x), f(self.y))
+end
 
 -- function vec.cross(self, other) return end
 
