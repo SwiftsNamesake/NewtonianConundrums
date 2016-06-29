@@ -49,12 +49,13 @@ end
 
 
 function Camera:scale(dscale)
-    self.scale = vec(dscale.x or self.scale.x, dscale.y or self.scale.y)
+    self.scale = self.scale:hadamard(vec(dscale.x or 1, dscale.y or 1))
 end
 
 
 function Camera:scaleAround(point, dscale)
     -- print('Camera:scaleAround', point, dscale, -point, -dscale)
+    -- TODO: Use defaults for dscale (?)
     self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
     self:move(-point)                              -- Move the 'pinned' point to the origin
     self.position = self.position:hadamard(dscale) -- Perform scaling
@@ -80,6 +81,7 @@ end
 -- Translate world coordinate into local coordinate
 function Camera:toLocalPoint(world_p)
     if self.angle == 0 then
+        -- return vec(world_p.x * self.scale.x + self.position.x, world_p.y * self.scale.y + self.position.y)
         return world_p:hadamard(self.scale) + self.position
     else
         -- TODO: Implement
