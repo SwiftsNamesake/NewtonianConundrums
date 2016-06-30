@@ -82,12 +82,12 @@ end
 callbacks = {}
 
 
-function callbacks.delegate(a, b, coll, collisionType)
+function callbacks.delegate(a, b, coll, collisionType, ...)
     local obj_a, obj_b = a:getUserData(), b:getUserData()
     local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
 
-    cb_a(obj_a, obj_b, coll)
-    cb_b(obj_b, obj_a, coll)
+    cb_a(obj_a, obj_b, coll, ...)
+    cb_b(obj_b, obj_a, coll, ...)
 end
 
 
@@ -107,11 +107,7 @@ end
 
 
 function callbacks.postSolve(a, b, coll, normalimpulse, tangentimpulse)
-    local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a.postSolve or noop), (obj_b.postSolve or noop)
-
-    cb_a(obj_a, obj_b, coll, normalimpulse, tangentimpulse)
-    cb_b(obj_b, obj_a, coll, normalimpulse, tangentimpulse)
+    callbacks.delegate(a, b, coll, 'postSolve', normalimpulse, tangentimpulse)
 end
 
 
@@ -122,17 +118,17 @@ function love.update(dt)
 
     -- Mode-specific events
     if state.running and state.mode == 'interactive' then
-        state.world:update(dt) --this puts the world into motion
+        state.world:update(dt) -- This puts the world into motion
 
-        --here we are going to create some keyboard events
-        if love.keyboard.isDown('right') then --press the right arrow key to push the ball to the right
+        -- Here we are going to create some keyboard events
+        if love.keyboard.isDown('right') then -- Press the right arrow key to push the ball to the right
             state.objects.ball.body:applyForce(400, 0)
-        elseif love.keyboard.isDown('left') then --press the left arrow key to push the ball to the left
+        elseif love.keyboard.isDown('left') then -- Press the left arrow key to push the ball to the left
             state.objects.ball.body:applyForce(-400, 0)
-        elseif love.keyboard.isDown('up') then --press the up arrow key to set the ball in the air
+        elseif love.keyboard.isDown('up') then -- Press the up arrow key to set the ball in the air
             state.objects.ball.body:setPosition(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
             state.objects.ball.body:setLinearVelocity(0, 0)
-        elseif love.keyboard.isDown('space') then --press the left arrow key to push the ball to the left
+        elseif love.keyboard.isDown('space') then -- Press the left arrow key to push the ball to the left
             state.objects.ball.body:applyForce(0, -400)
         end
     end
@@ -140,13 +136,13 @@ end
 
 
 function love.mousepressed(mx, my, button, istouch)
-    local wx, wy = state.camera:getMousePosition()
+    local mouse = state.camera:getMousePosition()
 
     -- Editor mode
     if state.mode == 'editor' then
         if state.editor.tool == 'random_shape' and button == 1 then
             local shape = (math.random() > 0.5) and love.physics.newRectangleShape(math.random(20, 120), math.random(20, 120)) or love.physics.newCircleShape(math.random(10, 60))
-            local o = Object(state, { x=wx, y=wy }, shape, 5, 'dynamic')
+            local o = Object(state, vec(wx, wy), shape, 5, 'dynamic')
             o.color = { math.random(0, 255), math.random(0, 255), math.random(0, 255), 255 }
             table.insert(state.objects, o)
         end
@@ -155,8 +151,9 @@ function love.mousepressed(mx, my, button, istouch)
             local closest = 999
             local obj_to_drag = nil
             for _, obj in pairs(state.objects) do
-                local d = math.dist(wx, wy, obj.x, obj.y)
-                if d < closest and obj:testPoint(wx, wy) then
+                -- TODO: You can simplify the distance check somewhat by squaring both sides
+                local d = (obj.position - mouse):abs() -- math.dist(wx, wy, obj.x, obj.y)
+                if d < closest and obj:testPoint(mouse) then
                     closest = d
                     obj_to_drag = obj
                 end
@@ -188,12 +185,19 @@ function love.mousemoved(x, y, dx, dy)
 
     local dragged_object = state.editor.dragged_object
     if state.mode == 'editor' and dragged_object ~= nil then
-        dragged_object.x = dragged_object.x + dx * state.camera.scale.x
-        dragged_object.y = dragged_object.y + dy * state.camera.scale.y
+        dragged_object.position = dragged_object.position + vec(dx, dy):hadamard(state.camera.scale)
     end
 end
 
 
+-- function love.wheelmoved(x, y)
+--     local dragged_object = state.editor.dragged_object
+--     if state.mode == 'editor' and dragged_object ~= nil then
+--         dragged_object.body:setAngle(dragged_object.body:getAngle() + y * 0.1)
+--     else
+--         state.camera:scaleAround(state.camera:getMousePosition(), (y >= 0) and vec(0.8, 0.8) or vec(1.25, 1.25))
+--     end
+-- end
 function love.wheelmoved(x, y)
     local dragged_object = state.editor.dragged_object
     if state.mode == 'editor' and dragged_object ~= nil then
@@ -202,6 +206,7 @@ function love.wheelmoved(x, y)
         state.camera:scaleAround(state.camera:getMousePosition(), (y >= 0) and vec(0.8, 0.8) or vec(1.25, 1.25))
     end
 end
+
 
 
 function love.keypressed(key, scancode, isrepeat)

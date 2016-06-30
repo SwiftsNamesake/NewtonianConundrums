@@ -91,8 +91,8 @@ function Object:render(options)
 end
 
 
-function Object:testPoint(x, y)
-    return self.shape:testPoint(self.x, self.y, self.body:getAngle(), x, y)
+function Object:testPoint(p)
+    return self.shape:testPoint(self.position.x, self.position.y, self.body:getAngle(), p.x, p.y)
 end
 
 

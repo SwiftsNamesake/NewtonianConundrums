@@ -21,7 +21,7 @@ end
 -- Push the camera onto the Love2D transformation stack
 function Camera:set()
     love.graphics.push()
-    love.graphics.scale(self.scale:unpack()) -- TODO: Finish
+    love.graphics.scale(self.scale:dotwise(math.inverse):unpack())
     love.graphics.rotate(-self.angle)
     love.graphics.translate((-self.position):dotwise(self.pixel_operation):unpack()) -- math.floor(-self.x), math.floor(-self.y)
 end
@@ -56,10 +56,17 @@ end
 function Camera:scaleAround(point, dscale)
     -- print('Camera:scaleAround', point, dscale, -point, -dscale)
     -- TODO: Use defaults for dscale (?)
-    self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
-    self:move(-point)                              -- Move the 'pinned' point to the origin
-    self.position = self.position:hadamard(dscale) -- Perform scaling
-    self:move(point)                               -- Move back
+    -- self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
+    -- self:move(-point)                              -- Move the 'pinned' point to the origin
+    -- self.position = self.position:hadamard(dscale) -- Perform scaling
+    -- self:move(point)                               -- Move back
+    dscale = vec(dscale.x or 1, dscale.y or (dscale.x or 1))
+    self.scale.x = self.scale.x * dscale.x
+    self.scale.y = self.scale.y * dscale.y
+    self:move(-point)
+    self.position.x = self.position.x * dscale.x
+    self.position.y = self.position.y * dscale.y
+    self:move(point)
 end
 
 
@@ -81,8 +88,8 @@ end
 -- Translate world coordinate into local coordinate
 function Camera:toLocalPoint(world_p)
     if self.angle == 0 then
-        -- return vec(world_p.x * self.scale.x + self.position.x, world_p.y * self.scale.y + self.position.y)
-        return world_p:hadamard(self.scale) + self.position
+        return vec(world_p.x * self.scale.x + self.position.x, world_p.y * self.scale.y + self.position.y)
+        -- return world_p:hadamard(self.scale) + self.position
     else
         -- TODO: Implement
         error("Rotation not yet fully implemented. Trigonometry is hard >__>")
