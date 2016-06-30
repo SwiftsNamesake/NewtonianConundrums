@@ -63,6 +63,10 @@ function vec:rotate(angle)
 end
 
 
+function vec:rotateAround(angle, p)
+    return (self-p):rotate(angle) + p
+end
+
 
 
 function vec:polar()

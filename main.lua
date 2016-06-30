@@ -23,16 +23,25 @@ assets = {}
 
 function assets.loadFont(fn)
     -- TODO: Rename (?)
-    return defaultdict(function (size) return love.graphics.newFont(fn, size) end)
+    return defaultdict(function (size) return love.graphics.newFont('assets/fonts/'..fn, size) end)
 end
+
+
+-- function assets.loadImage()
 
 
 function love.load()
     assets.fonts = {}
-    assets.fonts.alameda  = assets.loadFont('assets/fonts/alameda/alameda.ttf')
-    assets.fonts.elixia   = assets.loadFont('assets/fonts/elixia.ttf')
-    assets.fonts.aclonica = assets.loadFont('assets/fonts/aclonica.ttf')
-    assets.fonts.kust     = assets.loadFont('assets/fonts/Kust_Free_Brush_Font/kust.otf')
+    assets.fonts.alameda  = assets.loadFont('alameda/alameda.ttf')
+    assets.fonts.elixia   = assets.loadFont('elixia.ttf')
+    assets.fonts.aclonica = assets.loadFont('aclonica.ttf')
+    assets.fonts.kust     = assets.loadFont('Kust_Free_Brush_Font/kust.otf')
+
+    assets.images = defaultdict(function(fn) return love.graphics.newImage('assets/images/'..fn) end)
+    assets.sounds = defaultdict(function(fn) return love.audio.newSource('assets/audio/'..fn, 'static') end)
+
+    -- TODO: Move to conf.lua (?)
+    love.window.setIcon(love.image.newImageData('icon.png'))
 
     state = {}
     state.mode = 'interactive'
@@ -59,6 +68,24 @@ function love.load()
     state.objects.ball.fixture:setRestitution(0.8) -- Let the ball bounce
     state.objects.ball.color = {193, 47, 14}
 
+    for i, block in ipairs(love.filesystem.getDirectoryItems('assets/images/minecraft')) do
+        if string.endswith(block, '.png') then
+            local sz = vec(60, 60)
+            local hs = sz:scale(0.5)
+            local o = Object(state, vec(i*sz.x, sz.y), love.physics.newRectangleShape(sz.x, sz.y), 3, 'dynamic', 'mesh')
+            o.mesh = love.graphics.newMesh({
+                { -hs.x, -hs.y, 0.0, 0.0, 255, 255, 255, 255 },
+                {  hs.x, -hs.y, 1.0, 0.0, 255, 255, 255, 255 },
+                {  hs.x,  hs.y, 1.0, 1.0, 255, 255, 255, 255 },
+                { -hs.x,  hs.y, 0.0, 1.0, 255, 255, 255, 255 },
+            }, 'fan', 'dynamic')
+            o.label = block:sub(1, #block+1-1-4)
+            o.mesh:setTexture(assets.images['minecraft/'..block])
+            table.insert(state.objects, o)
+            print(o.label)
+        end
+    end
+
     for i, p in pairs(ps) do
         table.insert(state.objects, Object(state, p+vec(w/2, h-50/2), love.physics.newRectangleShape(w, 50),  3, 'static'))
         state.objects[#state.objects].color = {25, 190, 105}
@@ -72,7 +99,7 @@ function love.load()
     end
 
     state.joints = {}
-    state.joints.mouse = love.physics.newMouseJoint(state.objects[#state.objects].body, love.mouse.getPosition())
+    -- state.joints.mouse = love.physics.newMouseJoint(state.objects[#state.objects].body, love.mouse.getPosition())
 
     love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
     love.graphics.setFont(assets.fonts.kust[30])
@@ -114,7 +141,7 @@ end
 function love.update(dt)
 
     -- Universal update logic (independent of modes)
-    state.joints.mouse:setTarget(state.camera:getMousePosition():unpack())
+    -- state.joints.mouse:setTarget(state.camera:getMousePosition():unpack())
 
     -- Mode-specific events
     if state.running and state.mode == 'interactive' then
