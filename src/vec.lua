@@ -68,6 +68,15 @@ function vec:rotateAround(angle, p)
 end
 
 
+function vec:horizontal()
+    return vec(self.x, 0)
+end
+
+
+function vec:vertical()
+    return vec(0, self.y)
+end
+
 
 function vec:polar()
     -- Polar coordinates (the argument is in radians)

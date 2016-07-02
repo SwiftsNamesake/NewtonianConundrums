@@ -11,7 +11,7 @@ local Camera = class()
 function Camera:__init(position, scale, angle, pixel_perfect)
     self.position = position or vec(0,0) -- TODO: Use 'p' instead (?)
     self.scale    = scale    or vec(1,1) --
-    self.angle    = angle or 0.0         -- TODO: This is in radians right (?)
+    self.angle    = angle    or 0.0      -- TODO: This is in radians right (?)
 
     self.pixel_perfect   = pixel_perfect or false                              --
     self.pixel_operation = self.pixel_perfect and math.floor or moses.identity --
@@ -54,19 +54,11 @@ end
 
 
 function Camera:scaleAround(point, dscale)
-    -- print('Camera:scaleAround', point, dscale, -point, -dscale)
     -- TODO: Use defaults for dscale (?)
-    -- self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
-    -- self:move(-point)                              -- Move the 'pinned' point to the origin
-    -- self.position = self.position:hadamard(dscale) -- Perform scaling
-    -- self:move(point)                               -- Move back
-    dscale = vec(dscale.x or 1, dscale.y or (dscale.x or 1))
-    self.scale.x = self.scale.x * dscale.x
-    self.scale.y = self.scale.y * dscale.y
-    self:move(-point)
-    self.position.x = self.position.x * dscale.x
-    self.position.y = self.position.y * dscale.y
-    self:move(point)
+    self.scale = self.scale:hadamard(dscale)       -- Calculate the new scaling factor
+    self:move(-point)                              -- Move the 'pinned' point to the origin
+    self.position = self.position:hadamard(dscale) -- Perform scaling
+    self:move(point)                               -- Move back
 end
 
 

@@ -76,10 +76,7 @@ function Object:render(options)
     if v:abs() > 0.01  then
         local fr = self.position
 
-        local vertical   = vec(v.x, 0)
-        local horizontal = vec(0, v.y)
-
-        local to = fr+vertical:scale(0.5)
+        local to = fr+v:horizontal():scale(0.5)
         local arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 10, 30)
 
         if (to-fr):abs() > 0.01 then
@@ -87,7 +84,7 @@ function Object:render(options)
             render.polygon(arrow, { triangulate=true, font=assets.fonts.elixia, label=self.label })
         end
 
-        to = fr+horizontal:scale(0.5)
+        to = fr+v:vertical():scale(0.5)
 
         if (to-fr):abs() > 0.01 then
             arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 10, 30)

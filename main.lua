@@ -38,6 +38,7 @@ function love.load()
     assets.fonts.kust     = assets.loadFont('Kust_Free_Brush_Font/kust.otf')
 
     assets.images = defaultdict(function(fn) return love.graphics.newImage('assets/images/'..fn) end)
+    assets.video  = defaultdict(function(fn) return love.graphics.newVideo('assets/videos/'..fn, 'static') end)
     assets.sounds = defaultdict(function(fn) return love.audio.newSource('assets/audio/'..fn, 'static') end)
 
     -- TODO: Move to conf.lua (?)
@@ -73,22 +74,22 @@ function love.load()
             local sz = vec(60, 60)
             local hs = sz:scale(0.5)
             local o = Object(state, vec(i*sz.x, sz.y), love.physics.newRectangleShape(sz.x, sz.y), 3, 'dynamic', 'mesh')
+            o.color = { 255, 255, 255, 255 }
             o.mesh = love.graphics.newMesh({
                 { -hs.x, -hs.y, 0.0, 0.0, 255, 255, 255, 255 },
                 {  hs.x, -hs.y, 1.0, 0.0, 255, 255, 255, 255 },
                 {  hs.x,  hs.y, 1.0, 1.0, 255, 255, 255, 255 },
-                { -hs.x,  hs.y, 0.0, 1.0, 255, 255, 255, 255 },
+                { -hs.x,  hs.y, 0.0, 1.0, 255, 255, 255, 255 }
             }, 'fan', 'dynamic')
             o.label = block:sub(1, #block+1-1-4)
             o.mesh:setTexture(assets.images['minecraft/'..block])
             table.insert(state.objects, o)
-            print(o.label)
         end
     end
 
     for i, p in pairs(ps) do
         table.insert(state.objects, Object(state, p+vec(w/2, h-50/2), love.physics.newRectangleShape(w, 50),  3, 'static'))
-        state.objects[#state.objects].color = {25, 190, 105}
+        state.objects[#state.objects].color = { 25, 190, 105 }
         table.insert(state.objects, Object(state, p+vec(w/2, h-100/2),      love.physics.newRectangleShape(50, 100), 5, 'dynamic'))
         table.insert(state.objects, Object(state, p+vec(w/2, h-100/2-50/2), love.physics.newRectangleShape(100, 50), 5, 'dynamic'))
 
