@@ -171,7 +171,7 @@ function love.mousepressed(mx, my, button, istouch)
     if state.mode == 'editor' then
         if state.editor.tool == 'random_shape' and button == 1 then
             local shape = (math.random() > 0.5) and love.physics.newRectangleShape(math.random(20, 120), math.random(20, 120)) or love.physics.newCircleShape(math.random(10, 60))
-            local o = Object(state, vec(wx, wy), shape, 5, 'dynamic')
+            local o = Object(state, mouse, shape, 5, 'dynamic')
             o.color = { math.random(0, 255), math.random(0, 255), math.random(0, 255), 255 }
             table.insert(state.objects, o)
         end
