@@ -53,9 +53,8 @@ Object:property(
     'position',
     function(self) return vec(self.x, self.y) end,
     function(self, p)
-        -- TODO: What should this return (?)
-        self.x = p.x
-        self.y = p.y
+        -- TODO: What should this return (?) -- Nothing, this is invoked in a 'obj.position = vector' format
+        self.body:setPosition(unpack(p))
     end
 )
 
