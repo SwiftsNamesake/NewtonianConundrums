@@ -25,7 +25,7 @@ Object = require 'src.Object'
 -- function assets.loadImage()
 
 
-function love.loadAssets()
+local function loadAssets()
     assets = {}
     assets.fonts = {}
     function assets.loadFont(fn)
@@ -42,8 +42,36 @@ function love.loadAssets()
     assets.sounds = defaultdict(function(fn) return love.audio.newSource('assets/audio/'..fn, 'static') end)
 end
 
+local function setupPhysicsCallbacks()
+    local function delegate(a, b, coll, collisionType, ...)
+        local obj_a, obj_b = a:getUserData(), b:getUserData()
+        local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
+
+        cb_a(obj_a, obj_b, coll, ...)
+        cb_b(obj_b, obj_a, coll, ...)
+    end
+
+    local function beginContact(a, b, coll)
+        delegate(a, b, coll, 'beginContact')
+    end
+    
+    local function endContact(a, b, coll)
+        delegate(a, b, coll, 'endContact')
+    end
+    
+    local function preSolve(a, b, coll)
+        delegate(a, b, coll, 'preSolve')
+    end
+    
+    local function postSolve(a, b, coll, normalimpulse, tangentimpulse)
+        delegate(a, b, coll, 'postSolve', normalimpulse, tangentimpulse)
+    end
+    
+    state.world.setCallbacks(state.world, beginContact, endContact, preSolve, postSolve)
+end
+
 function love.load()
-    love.loadAssets()
+    loadAssets()
 
     state = {}
     state.mode = 'interactive'
@@ -58,7 +86,7 @@ function love.load()
     state.interactive = {}
     state.interactive.pin = nil -- Object that is pinned by the mouse
 
-    state.world:setCallbacks(callbacks.beginContact, callbacks.endContact, callbacks.preSolve, callbacks.postSolve)
+    setupPhysicsCallbacks()
 
     -- table to hold all our physical objects
     local w, h = love.graphics.getDimensions()
@@ -106,39 +134,6 @@ function love.load()
     love.graphics.setBackgroundColor(104, 136, 248) -- Set the background color to a nice blue
     love.graphics.setFont(assets.fonts.kust[30])
 end
-
-
-callbacks = {}
-
-
-function callbacks.delegate(a, b, coll, collisionType, ...)
-    local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
-
-    cb_a(obj_a, obj_b, coll, ...)
-    cb_b(obj_b, obj_a, coll, ...)
-end
-
-
-function callbacks.beginContact(a, b, coll)
-    callbacks.delegate(a, b, coll, 'beginContact')
-end
-
-
-function callbacks.endContact(a, b, coll)
-    callbacks.delegate(a, b, coll, 'endContact')
-end
-
-
-function callbacks.preSolve(a, b, coll)
-    callbacks.delegate(a, b, coll, 'preSolve')
-end
-
-
-function callbacks.postSolve(a, b, coll, normalimpulse, tangentimpulse)
-    callbacks.delegate(a, b, coll, 'postSolve', normalimpulse, tangentimpulse)
-end
-
 
 function love.update(dt)
 
