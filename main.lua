@@ -19,30 +19,31 @@ render = require 'src.render'
 Object = require 'src.Object'
 
 
-assets = {}
 
-function assets.loadFont(fn)
-    -- TODO: Rename (?)
-    return defaultdict(function (size) return love.graphics.newFont('assets/fonts/'..fn, size) end)
-end
 
 
 -- function assets.loadImage()
 
 
-function love.load()
+function love.loadAssets()
+    assets = {}
     assets.fonts = {}
+    function assets.loadFont(fn)
+        -- TODO: Rename (?)
+        return defaultdict(function (size) return love.graphics.newFont('assets/fonts/'..fn, size) end)
+    end
     assets.fonts.alameda  = assets.loadFont('alameda/alameda.ttf')
     assets.fonts.elixia   = assets.loadFont('elixia.ttf')
     assets.fonts.aclonica = assets.loadFont('aclonica.ttf')
     assets.fonts.kust     = assets.loadFont('Kust_Free_Brush_Font/kust.otf')
-
+    
     assets.images = defaultdict(function(fn) return love.graphics.newImage('assets/images/'..fn) end)
     assets.video  = defaultdict(function(fn) return love.graphics.newVideo('assets/videos/'..fn, 'static') end)
     assets.sounds = defaultdict(function(fn) return love.audio.newSource('assets/audio/'..fn, 'static') end)
+end
 
-    -- TODO: Move to conf.lua (?)
-    love.window.setIcon(love.image.newImageData('icon.png'))
+function love.load()
+    love.loadAssets()
 
     state = {}
     state.mode = 'interactive'
