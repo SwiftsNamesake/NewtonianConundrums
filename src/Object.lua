@@ -76,7 +76,7 @@ function Object:render(options)
         local fr = self.position
 
         local to = fr+v:horizontal():scale(0.5)
-        local arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 10, 30)
+        local arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 4, 20)
 
         if (to-fr):abs() > 0.01 then
             love.graphics.setColor(40, 3, 184, 255)
@@ -86,7 +86,7 @@ function Object:render(options)
         to = fr+v:vertical():scale(0.5)
 
         if (to-fr):abs() > 0.01 then
-            arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 10, 30)
+            arrow = shapes.arrow(fr, to, math.clamp(0.2, 1 - 30/(to-fr):abs(), 0.95), 4, 20)
             love.graphics.setColor(150, 8, 8, 255)
             render.polygon(arrow, { triangulate=true, font=assets.fonts.elixia, label=self.label })
         end
