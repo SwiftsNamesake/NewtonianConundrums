@@ -47,23 +47,13 @@ function canvasFromFile(filename)
     
     return new_canvas
 end
--- Input utils
 
 function keypadDirection(up, down, left, right, speed)
     speed = speed or 1
     
-    local x, y = 0, 0
-    if love.keyboard.isDown(up) then
-        y = -1
-    elseif love.keyboard.isDown(down) then
-        y = 1
-    end
-    
-    if love.keyboard.isDown(left) then
-        x = -1
-    elseif love.keyboard.isDown(right) then
-        x = 1
-    end
+    local isDown = love.keyboard.isDown
+    local y = isDown(up) and -1 or isDown(down) and 1 or 0
+    local x = isDown(up) and -1 or isDown(down) and 1 or 0
     
     return x * speed, y * speed
 end
