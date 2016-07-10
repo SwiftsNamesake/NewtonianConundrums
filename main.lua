@@ -19,30 +19,59 @@ render = require 'src.render'
 Object = require 'src.Object'
 
 
-assets = {}
 
-function assets.loadFont(fn)
-    -- TODO: Rename (?)
-    return defaultdict(function (size) return love.graphics.newFont('assets/fonts/'..fn, size) end)
-end
 
 
 -- function assets.loadImage()
 
 
-function love.load()
+local function loadAssets()
+    assets = {}
     assets.fonts = {}
+    function assets.loadFont(fn)
+        -- TODO: Rename (?)
+        return defaultdict(function (size) return love.graphics.newFont('assets/fonts/'..fn, size) end)
+    end
     assets.fonts.alameda  = assets.loadFont('alameda/alameda.ttf')
     assets.fonts.elixia   = assets.loadFont('elixia.ttf')
     assets.fonts.aclonica = assets.loadFont('aclonica.ttf')
     assets.fonts.kust     = assets.loadFont('Kust_Free_Brush_Font/kust.otf')
-
+    
     assets.images = defaultdict(function(fn) return love.graphics.newImage('assets/images/'..fn) end)
     assets.video  = defaultdict(function(fn) return love.graphics.newVideo('assets/videos/'..fn, 'static') end)
     assets.sounds = defaultdict(function(fn) return love.audio.newSource('assets/audio/'..fn, 'static') end)
+end
 
-    -- TODO: Move to conf.lua (?)
-    love.window.setIcon(love.image.newImageData('icon.png'))
+local function setupPhysicsCallbacks()
+    local function delegate(a, b, coll, collisionType, ...)
+        local obj_a, obj_b = a:getUserData(), b:getUserData()
+        local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
+
+        cb_a(obj_a, obj_b, coll, ...)
+        cb_b(obj_b, obj_a, coll, ...)
+    end
+
+    local function beginContact(a, b, coll)
+        delegate(a, b, coll, 'beginContact')
+    end
+    
+    local function endContact(a, b, coll)
+        delegate(a, b, coll, 'endContact')
+    end
+    
+    local function preSolve(a, b, coll)
+        delegate(a, b, coll, 'preSolve')
+    end
+    
+    local function postSolve(a, b, coll, normalimpulse, tangentimpulse)
+        delegate(a, b, coll, 'postSolve', normalimpulse, tangentimpulse)
+    end
+    
+    state.world.setCallbacks(state.world, beginContact, endContact, preSolve, postSolve)
+end
+
+function love.load()
+    loadAssets()
 
     state = {}
     state.mode = 'interactive'
@@ -57,7 +86,7 @@ function love.load()
     state.interactive = {}
     state.interactive.pin = nil -- Object that is pinned by the mouse
 
-    state.world:setCallbacks(callbacks.beginContact, callbacks.endContact, callbacks.preSolve, callbacks.postSolve)
+    setupPhysicsCallbacks()
 
     -- table to hold all our physical objects
     local w, h = love.graphics.getDimensions()
@@ -106,39 +135,6 @@ function love.load()
     love.graphics.setFont(assets.fonts.kust[30])
 end
 
-
-callbacks = {}
-
-
-function callbacks.delegate(a, b, coll, collisionType, ...)
-    local obj_a, obj_b = a:getUserData(), b:getUserData()
-    local cb_a, cb_b = (obj_a[collisionType] or noop), (obj_b[collisionType] or noop)
-
-    cb_a(obj_a, obj_b, coll, ...)
-    cb_b(obj_b, obj_a, coll, ...)
-end
-
-
-function callbacks.beginContact(a, b, coll)
-    callbacks.delegate(a, b, coll, 'beginContact')
-end
-
-
-function callbacks.endContact(a, b, coll)
-    callbacks.delegate(a, b, coll, 'endContact')
-end
-
-
-function callbacks.preSolve(a, b, coll)
-    callbacks.delegate(a, b, coll, 'preSolve')
-end
-
-
-function callbacks.postSolve(a, b, coll, normalimpulse, tangentimpulse)
-    callbacks.delegate(a, b, coll, 'postSolve', normalimpulse, tangentimpulse)
-end
-
-
 function love.update(dt)
 
     -- Universal update logic (independent of modes)
@@ -170,7 +166,7 @@ function love.mousepressed(mx, my, button, istouch)
     if state.mode == 'editor' then
         if state.editor.tool == 'random_shape' and button == 1 then
             local shape = (math.random() > 0.5) and love.physics.newRectangleShape(math.random(20, 120), math.random(20, 120)) or love.physics.newCircleShape(math.random(10, 60))
-            local o = Object(state, vec(wx, wy), shape, 5, 'dynamic')
+            local o = Object(state, mouse, shape, 5, 'dynamic')
             o.color = { math.random(0, 255), math.random(0, 255), math.random(0, 255), 255 }
             table.insert(state.objects, o)
         end

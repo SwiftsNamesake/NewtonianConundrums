@@ -13,7 +13,7 @@ function love.conf(t)
     t.console = true
 
     t.window.title = 'Newtonian Conundrums'
-    -- t.window.setIcon 'icon.png' --love.graphics.newImage('icon.png')
+    t.window.icon = 'assets/icon.png'
 
     t.window.width      = 1024
     t.window.height     = 768
